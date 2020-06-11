@@ -1,6 +1,6 @@
 # TPM NV Space Access Tool (`tpmtool`)
 [<img align="left" src="tpmtool-logo.png" width="128"/>](tpmtool-logo.png)
-The `TpmTool` utility is a cross-platform tool for accessing `TPM2.0` Non-Volatile (NV) Spaces (Index Values) on compliant systems. It provides the ability to enumerate, create, delete, query, and lock NV indices, as well as to read and write data stored in them.
+The `TpmTool` utility is a simple cross-platform tool for accessing `TPM2.0` Non-Volatile (NV) Spaces (Index Values) on compliant systems, with zero dependencies on any `TPM2.0` stack. It provides the ability to enumerate, create, delete, query, and lock NV indices, as well as to read and write data stored in them.
 
 # Purpose
 All modern systems that shipped with Windows `10` and later have either an on-board Trusted Platform Chip (TPM) from a vendor such as Infineon which supports the `TPM2.0` standard, or have modern Intel hardware with embedded Platform Trust Technology (PTT), which fully supports the `TPM2.0` standard without requiring an external chip.
