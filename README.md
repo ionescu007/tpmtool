@@ -2,6 +2,7 @@
 TpmTool is a cross-platform tool for accessing TPM Non-Volatile (NV) Spaces (Index Values)
 
 # Usage
+```
 TpmTool v1.0.0 - Access TPM2.0 NV Spaces
 Copyright (C) 2020 Alex Ionescu
 @aionescu -- www.windows-internals.com
