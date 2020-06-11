@@ -1,17 +1,18 @@
 # TPM NV Space Access Tool (`tpmtool`)
+![Logo](tpmtool-logo.png)
 The `TpmTool` utility is a cross-platform tool for accessing `TPM2.0` Non-Volatile (NV) Spaces (Index Values) on compliant systems. It provides the ability to enumerate, create, delete, query, and lock NV indices, as well as to read and write data stored in them.
 
 # Features
 * Enumerate all `TPM2.0` handles that map to NV index values.
 * Query a particular NV index value to get back its size, attributes, permissions, and dirty (_written_) flag.
 * Create a new NV index of up to the architecturally maximum supported size, with an optional password authorization. The following attributes are supported
-** Making the index support being locked against read and/or write access until the next reset.
-** Making the index support being write-once once locked, regardless of reset.
-** Making the index write-all such that all data must be written in one go, starting at offset `0`.
-** Making the index store its data in RAM, and only written to NV storage during orderly shutdown.
-** Making the index's dirty (_written_) flag volatile, i.e.: cleared at the next reset.
-** Making the index non-deleteable except through special policy. Note that `tpmtool` does not support this type of deletion, however.
-** Making the indedx unprotected against dictionary attacks, and ignore the lockout if one was reached.
+  - Making the index support being locked against read and/or write access until the next reset.
+  - Making the index support being write-once once locked, regardless of reset.
+  - Making the index write-all such that all data must be written in one go, starting at offset `0`.
+  - Making the index store its data in RAM, and only written to NV storage during orderly shutdown.
+  - Making the index's dirty (_written_) flag volatile, i.e.: cleared at the next reset.
+  - Making the index non-deleteable except through special policy. Note that `tpmtool` does not support this type of deletion, however.
+  - Making the indedx unprotected against dictionary attacks, and ignore the lockout if one was reached.
 * Delete an existing NV index, as long as authorization is valid and the index does not require policy-based deletion (see above).
 * Read the data stored in an NV index, both as a hexdump in `STDERR` for visual rendering, as well as raw data in `STDOUT`, which can be redirected to a file.
 * Write data to be stored in an NV index, based on `STDIN`, which can either be piped through `echo` or redirected from a file.
