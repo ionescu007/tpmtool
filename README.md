@@ -38,6 +38,32 @@ On Windows, you must run `TpmTool` with `Administrator` privileges and similarly
 
 # Examples
 
+* Simple
+  - Create a simple owner read/write index of 128 bytes: `tpmtool 0x01004500 -c RW NA 0 128`
+  - Write "Hello World" in it: `echo Hello World | tpmtool 0x01004500 -w 0 16`
+  - Read back 5 bytes from the contents: `tpmtool 0x01004500 -r 0 5`
+  - Delete the index: `tpmtool 0x01004500 -d`
+  
+* Intermediate
+  - Create a password-protected authenticated read/write index of 128 bytes: `tpmtool 0x01004600 -c NA RW 0 128 bazinga!`
+  - Confirm that nobody has written into it yet: `tpmtool 0x01004600 -q`
+  - Write "Goodbye World" in it: `echo Hello World | tpmtool 0x01004600 -w 0 16 bazinga!`
+  - Try reading back 10 bytes without the password: `tpmtool 0x01004600 -r 0 10`
+  - Now with the password: `tpmtool 0x01004600 -r 0 10 bazinga!`
+  - You can also try with the wrong password a few times... but your TPM will lock you out!
+  - Delete the index: `tpmtool 0x01004600 -d`
+* Advanced
+  - Create a password-protected authenticated read/write index of 29 bytes, with read and write locking capabilities, without partial write support : `tpmtool 0x01004600 -c NA RW RL+WL+WA 29 hunter12`
+  - Validate the attributes, size, and dirty flag: `tpmtool 0x01004600 -q`
+  - Safekeep your Windows Product Key: `powershell "(Get-WmiObject -Class SoftwareLicensingService).OA3xOriginalProductKey" | tpmtool 0x01004600 -w 0 29 hunter12`
+  - Try writing partial data: `echo foo | tpmtool 0x01004600 -w 0 2 hunter12`
+  - Lock the index against writes: `tpmtool 0x01004600 -wl hunter12`
+  - Try safekeeping your key again: `powershell "(Get-WmiObject -Class SoftwareLicensingService).OA3xOriginalProductKey" | tpmtool 0x01004600 -w 0 29 hunter12`
+  - Read your key back: `tpmtool 0x01004600 -r 0 29 hunter12`
+  - Lock the index against reads: `tpmtool 0x01004600 -rl hunter12`
+  - Try reading your key back again: `tpmtool 0x01004600 -r 0 29 hunter12`
+  - Reboot!
+   
 # Full Usage Help
 ```
 TpmTool v1.0.0 - Access TPM2.0 NV Spaces
