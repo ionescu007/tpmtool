@@ -1,5 +1,5 @@
 # TPM NV Space Access Tool (`tpmtool`)
-![Logo](tpmtool-logo.png)
+[<img src="tpmtool-logo.png" width="250"/>](tpmtool-logo.png)
 The `TpmTool` utility is a cross-platform tool for accessing `TPM2.0` Non-Volatile (NV) Spaces (Index Values) on compliant systems. It provides the ability to enumerate, create, delete, query, and lock NV indices, as well as to read and write data stored in them.
 
 # Features
