@@ -5,11 +5,11 @@ The `TpmTool` utility is a cross-platform tool for accessing `TPM2.0` Non-Volati
 # Purpose
 All modern systems that shipped with Windows `10` and later have either an on-board Trusted Platform Chip (TPM) from a vendor such as Infineon which supports the `TPM2.0` standard, or have modern Intel hardware with embedded Platform Trust Technology (PTT), which fully supports the `TPM2.0` standard without requiring an external chip.
 
-While normally only used if the user enables BitLocker, or Active Directory Remote Attestation (or Host Guardian), or leverages Windows Defender System Guard, the `TPM2.0` fully allows for programatic use by applications and users on the machine, providing capabilities such as random number generation (RNG), authentication, encryption and decryption, attestation and sealing of secrets, and more. 
+While normally only used if the user enables BitLocker, or Active Directory Remote Attestation (or Host Guardian), or leverages Windows Defender System Guard, the `TPM2.0` fully allows for programmatic use by applications and users on the machine, providing capabilities such as random number generation (RNG), authentication, encryption and decryption, attestation and sealing of secrets, and more. 
 
 Access to the TPM chip is typically be provided by a low-level driver (`Tpm.sys` on Windows, `\dev\tpm0` on Linux), but since the interface is inherently exclusive to a single calling process, most operating systems provide an abstraction on top of the raw interface. In Windows, this is called the TPM Base Service (`Tbs.sys`), and in Linux, the TPM Resource Arbitrator or Resource Manager (`\dev\tpmrm0`). Further, higher-level SDKs exist on top of these stacks, such as `TPM.MSR` from Microsoft, or TSS2 from IBM.
 
-While these abstractions are useful and provide portable ease of use to profesional enterprise-grade applications, they make leveraging `TPM2.0` functionality a painful combination of libraries, `.NET` code, version interdependencies, and make troubleshooting errors at the silicon level all but impossible. Developers end up learning how to use the SDK, now how the actual TPM works.
+While these abstractions are useful and provide portable ease of use to professional enterprise-grade applications, they make leveraging `TPM2.0` functionality a painful combination of libraries, `.NET` code, version interdependencies, and make troubleshooting errors at the silicon level all but impossible. Developers end up learning how to use the SDK, not how the actual TPM works.
 
 To solve this, `TpmTool` was created for a dual-purpose. First, as a pre-compiled Win32 binary, it allows average computer users to read and write secrets in their TPM chips, optionally protected by a custom password, without any dependencies. Think of it as their own little secret lock box.
 
@@ -25,9 +25,9 @@ Second, as it is fully open source and commented, it provides an easy-to-learn-f
   - Making the index store its data in RAM, and only written to NV storage during orderly shutdown.
   - Making the index's dirty (_written_) flag volatile, i.e.: cleared at the next reset.
   - Making the index non-deleteable except through special policy. Note that `tpmtool` does not support this type of deletion, however.
-  - Making the indedx unprotected against dictionary attacks, and ignore the lockout if one was reached.
+  - Making the index unprotected against dictionary attacks and ignore the lockout if one was reached.
 * Delete an existing NV index, as long as authorization is valid and the index does not require policy-based deletion (see above).
-* Read the data stored in an NV index, both as a hexdump in `STDERR` for visual rendering, as well as raw data in `STDOUT`, which can be redirected to a file.
+* Read the data stored in an NV index, both as a hex dump in `STDERR` for visual rendering, as well as raw data in `STDOUT`, which can be redirected to a file.
 * Write data to be stored in an NV index, based on `STDIN`, which can either be piped through `echo` or redirected from a file.
 * Lock an NV index either against further reads, and/or against further writes, until the next `TPM2.0` reset. The index must have been created with the appropriate attributes to allow read and/or write locking, and further, if it was created as write-once, then it can only be deleted and re-created. 
 
