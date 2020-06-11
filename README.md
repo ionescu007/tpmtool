@@ -12,12 +12,7 @@ read/write data within them. Password authentication can optionally
 be used to protect their contents.
 
 Usage: tpmtool [-e|index]
-               [-c <attributes> <owner> <auth> <size>|
-                -r <offset> <size>|-w <offset> <size>|
-                -rl|
-                -wl|
-                -d|
-                -q]
+               [-c <attributes> <owner> <auth> <size>|-r <offset> <size>|-w <offset> <size>|-rl|-wl|-d|-q]
                [password]
     -e    Enumerates all NV spaces active on the TPM
     -c    Create a new NV space with the given index value.
