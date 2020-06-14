@@ -254,7 +254,7 @@ WriteSpace (
     //
     // Read the offset and make sure it's valid
     //
-    offset = static_cast<uint16_t>(strtoul(Arguments[3], nullptr, 10));
+    offset = static_cast<uint16_t>(strtoul(Arguments[3], nullptr, 0));
     if ((offset == 0) && (Arguments[3][0] != '0'))
     {
         fprintf(stderr, "Offset of %s bytes not permitted!\n", Arguments[3]);
@@ -264,7 +264,7 @@ WriteSpace (
     //
     // Read the size and make sure it's valid
     //
-    dataSize = static_cast<uint16_t>(strtoul(Arguments[4], nullptr, 10));
+    dataSize = static_cast<uint16_t>(strtoul(Arguments[4], nullptr, 0));
     if (dataSize == 0)
     {
         fprintf(stderr, "Size of %s bytes not permitted!\n", Arguments[4]);
@@ -368,7 +368,7 @@ ReadSpace (
     //
     // Read the offset and make sure it's valid
     //
-    offset = static_cast<uint16_t>(strtoul(Arguments[3], nullptr, 10));
+    offset = static_cast<uint16_t>(strtoul(Arguments[3], nullptr, 0));
     if ((offset == 0) && (Arguments[3][0] != '0'))
     {
         fprintf(stderr, "Offset of %s bytes not permitted!\n", Arguments[3]);
@@ -378,7 +378,7 @@ ReadSpace (
     //
     // Read the size and make sure it's valid
     //
-    dataSize = static_cast<uint16_t>(strtoul(Arguments[4], nullptr, 10));
+    dataSize = static_cast<uint16_t>(strtoul(Arguments[4], nullptr, 0));
     if (dataSize == 0)
     {
         fprintf(stderr, "Size of %s bytes not permitted!\n", Arguments[4]);
@@ -568,7 +568,7 @@ CreateSpace (
     //
     // Get the data size and validate
     //
-    dataSize = static_cast<uint16_t>(strtoul(Arguments[6], nullptr, 10));
+    dataSize = static_cast<uint16_t>(strtoul(Arguments[6], nullptr, 0));
     if (dataSize == 0)
     {
         fprintf(stderr, "Space of %s bytes not permitted!\n", Arguments[5]);
