@@ -100,7 +100,7 @@ PrintUsage (
     fprintf(stderr, "TpmTool allows you to define non-volatile (NV) spaces (indices) and\n");
     fprintf(stderr, "read/write data within them. Password authentication can optionally\n");
     fprintf(stderr, "be used to protect their contents.\n\n");
-    fprintf(stderr, "Usage: tpmtool [-h <size>|-r <size>|-t|-e|index] [-c <attributes> <owner> <auth> <size>|-r <offset> <size>|-w <offset> <size>|-rl|-wl|-d|-q] [password]\n");
+    fprintf(stderr, "Usage: tpmtool [-h <size>|-r <size>|-t|-e|index] [-c <attributes> <owner> <auth> <size>|-r <offset> <size>|-w <offset> <size>|-rl|-wl|-d|-q|-qa] [password]\n");
     fprintf(stderr, "    -r    Retrieves random bytes based on the size given.\n");
     fprintf(stderr, "    -t    Reads the TPM Time Information.\n");
     fprintf(stderr, "    -h    Computes the SHA-256 hash of the data in STDIN.\n");
@@ -914,7 +914,19 @@ EnumerateSpaces (
     //
     for (i = 0; i < handleCount; i++)
     {
-        printf("NV index: 0x%08x\n", handleArray[i].Value);
+        if (QuerySpaces)
+        {
+            printf("NV index: 0x%08x [", handleArray[i].Value);
+            if (QuerySpaceMinimalOutput(TpmHandle, handleArray[i]) == -1)
+            {
+                printf("Failed to query");
+            }
+            printf("]\n");
+        }
+        else
+        {
+            printf("NV index: 0x%08x\n", handleArray[i].Value);
+        }
     }
     return 0;
 }
