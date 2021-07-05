@@ -69,8 +69,8 @@ On Windows, you must run `TpmTool` with `Administrator` privileges and similarly
   - Reboot!
 
 * Other
- - Hash an input string: `echo hello | tpmtool -h 5`
- - Get 16 random bytes: `tpmtool -r 16`
+  - Hash an input string: `echo hello | tpmtool -h 5`
+  - Get 16 random bytes: `tpmtool -r 16`
 
 # Full Usage Help
 ```
