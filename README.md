@@ -16,6 +16,9 @@ To solve this, `TpmTool` was created for a dual-purpose. First, as a pre-compile
 Second, as it is fully open source and commented, it provides an easy-to-learn-from guide into how to correctly build and send `TPM2.0` commands, as well as parse their replies, without large competing 3rd party SDKs getting in the way, and without having to understand the full machine-generated 640KB specification headers. The code and headers behind `TpmTool` are meant to be easy to read, and leverage modern C++ functionality for clearer and stricter interpretation of the `TPM2.0` standard's structures -- all while keeping the same naming conventions for ease of reference.
 
 # Features
+* Hash a given buffer with SHA-256.
+* Return random bytes up to the TPM's maximum RNG size.
+* Get the TPM clock and time information, including reset and reboot count.
 * Enumerate all `TPM2.0` handles that map to NV index values.
 * Query a particular NV index value to get back its size, attributes, permissions, and dirty (_written_) flag.
 * Create a new NV index of up to the architecturally maximum supported size, with an optional password authorization. The following attributes are supported
@@ -43,7 +46,7 @@ On Windows, you must run `TpmTool` with `Administrator` privileges and similarly
   - Write "Hello World" in it: `echo Hello World | tpmtool 0x01004500 -w 0 16`
   - Read back 5 bytes from the contents: `tpmtool 0x01004500 -r 0 5`
   - Delete the index: `tpmtool 0x01004500 -d`
-  
+
 * Intermediate
   - Create a password-protected authenticated read/write index of 128 bytes: `tpmtool 0x01004600 -c NA RW 0 128 bazinga!`
   - Confirm that nobody has written into it yet: `tpmtool 0x01004600 -q`
@@ -52,6 +55,7 @@ On Windows, you must run `TpmTool` with `Administrator` privileges and similarly
   - Now with the password: `tpmtool 0x01004600 -r 0 10 bazinga!`
   - You can also try with the wrong password a few times... but your TPM will lock you out!
   - Delete the index: `tpmtool 0x01004600 -d`
+
 * Advanced
   - Create a password-protected authenticated read/write index of 29 bytes, with read and write locking capabilities, without partial write support : `tpmtool 0x01004600 -c NA RW RL+WL+WA 29 hunter12`
   - Validate the attributes, size, and dirty flag: `tpmtool 0x01004600 -q`
@@ -63,21 +67,29 @@ On Windows, you must run `TpmTool` with `Administrator` privileges and similarly
   - Lock the index against reads: `tpmtool 0x01004600 -rl hunter12`
   - Try reading your key back again: `tpmtool 0x01004600 -r 0 29 hunter12`
   - Reboot!
-   
+
+* Other
+ - Hash an input string: `echo hello | tpmtool -h 5`
+ - Get 16 random bytes: `tpmtool -r 16`
+
 # Full Usage Help
 ```
-TpmTool v1.0.0 - Access TPM2.0 NV Spaces
-Copyright (C) 2020 Alex Ionescu
+TpmTool v1.2.0 - Access TPM2.0 NV Spaces
+Copyright (C) 2020-2021 Alex Ionescu
 @aionescu -- www.windows-internals.com
 
 TpmTool allows you to define non-volatile (NV) spaces (indices) and
 read/write data within them. Password authentication can optionally
 be used to protect their contents.
 
-Usage: tpmtool [-e|index]
+Usage: tpmtool [-h <size>|-r <size>|-t|-e|index]
                [-c <attributes> <owner> <auth> <size>|-r <offset> <size>|-w <offset> <size>|-rl|-wl|-d|-q]
                [password]
-    -e    Enumerates all NV spaces active on the TPM
+    -r    Retrieves random bytes based on the size given.
+    -t    Reads the TPM Time Information.
+    -h    Computes the SHA-256 hash of the data in STDIN.
+          You can use pipes or redirection to write from a file.
+    -e    Enumerates all NV spaces active on the TPM.
     -c    Create a new NV space with the given index value.
           Attributes can be a combination (use + for multiple) of:
               RL    Allow the resulting NV index to be read-locked.

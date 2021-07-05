@@ -23,7 +23,7 @@ Environment:
 --*/
 
 #pragma once
-#include <type_traits> 
+#include <type_traits>
 
 //
 // This macro calculates the size of a variable data command made up of
@@ -115,6 +115,11 @@ uint32_t
 OsSwap32 (
     uint32_t Input
     );
+
+uint64_t
+OsSwap64 (
+    uint64_t Input
+);
 
 bool
 TpmOsIssueCommand (

@@ -158,3 +158,28 @@ TpmNvEnumerate2 (
     uint32_t* IndexCount,
     TPM_NV_INDEX* IndexArray
     );
+
+TPM_RC
+TpmReadClock (
+    uintptr_t TpmHandle,
+    uint64_t* Time,
+    uint64_t* Clock,
+    uint32_t* ResetCount,
+    uint32_t* RestartCount,
+    TPMI_YES_NO* IsSafe
+    );
+
+TPM_RC
+TpmGetRandom (
+    uintptr_t TpmHandle,
+    uint16_t* BytesRequested,
+    uint8_t* RandomBytes
+    );
+
+TPM_RC
+TpmHash (
+    uintptr_t TpmHandle,
+    uint16_t InputSize,
+    uint8_t* InputData,
+    uint8_t* OutputData
+    );

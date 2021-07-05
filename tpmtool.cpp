@@ -96,8 +96,12 @@ PrintUsage (
     fprintf(stderr, "TpmTool allows you to define non-volatile (NV) spaces (indices) and\n");
     fprintf(stderr, "read/write data within them. Password authentication can optionally\n");
     fprintf(stderr, "be used to protect their contents.\n\n");
-    fprintf(stderr, "Usage: tpmtool [-e|index] [-c <attributes> <owner> <auth> <size>|-r <offset> <size>|-w <offset> <size>|-rl|-wl|-d|-q] [password]\n");
-    fprintf(stderr, "    -e    Enumerates all NV spaces active on the TPM\n");
+    fprintf(stderr, "Usage: tpmtool [-h <size>|-r <size>|-t|-e|index] [-c <attributes> <owner> <auth> <size>|-r <offset> <size>|-w <offset> <size>|-rl|-wl|-d|-q] [password]\n");
+    fprintf(stderr, "    -r    Retrieves random bytes based on the size given.\n");
+    fprintf(stderr, "    -t    Reads the TPM Time Information.\n");
+    fprintf(stderr, "    -h    Computes the SHA-256 hash of the data in STDIN.\n");
+    fprintf(stderr, "          You can use pipes or redirection to write from a file.\n");
+    fprintf(stderr, "    -e    Enumerates all NV spaces active on the TPM.\n");
     fprintf(stderr, "    -c    Create a new NV space with the given index value.\n");
     fprintf(stderr, "          Attributes can be a combination (use + for multiple) of:\n");
     fprintf(stderr, "              RL    Allow the resulting NV index to be read-locked.\n");
@@ -816,6 +820,188 @@ EnumerateSpaces (
 }
 
 int32_t
+ReadClock (
+    int32_t ArgumentCount,
+    uintptr_t TpmHandle
+    )
+{
+    uint64_t timeValue;
+    uint64_t clockValue;
+    uint32_t resetCount;
+    uint32_t restartCount;
+    TPMI_YES_NO isSafe;
+    TPM_RC tpmResult;
+
+    //
+    // This one is special and takes no other arguments
+    //
+    if (ArgumentCount != 2)
+    {
+        PrintUsage();
+        return -1;
+    }
+
+    //
+    // Send the TPM command to read the information
+    //
+    tpmResult = TpmReadClock(TpmHandle,
+                             &timeValue,
+                             &clockValue,
+                             &resetCount,
+                             &restartCount,
+                             &isSafe);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        fprintf(stderr, "Clock read failed with code 0x%02x\n", tpmResult);
+        return -1;
+    }
+
+    //
+    // Output the result back to the user
+    //
+    printf("Clock: %016lld\t"
+            "Time: %016lld\t"
+            "Resets: %08ld\t"
+            "Restarts: %08ld\t"
+            "Safe: %c\n",
+            clockValue,
+            timeValue,
+            resetCount,
+            restartCount,
+            isSafe == 1? 'Y' : 'N');
+    return 0;
+}
+
+int32_t
+GetRandom (
+    int32_t ArgumentCount,
+    char* Arguments[],
+    uintptr_t TpmHandle
+    )
+{
+    TPM_RC tpmResult;
+    uint32_t userInput;
+    uint16_t requestedBytes;
+    uint8_t* randomBytes;
+
+    //
+    // This one is special and takes no other arguments
+    //
+    if (ArgumentCount != 3)
+    {
+        PrintUsage();
+        return -1;
+    }
+
+    //
+    // Check how many random bytes the user wants
+    //
+    userInput = strtoul(Arguments[2], NULL, 0);
+    if (userInput >= USHRT_MAX)
+    {
+        fprintf(stderr, "Bytes requested over 64KB\n");
+        return -1;
+    }
+
+    //
+    // Allocate the output buffer
+    //
+    requestedBytes = static_cast<uint16_t>(userInput);
+    randomBytes = static_cast<uint8_t*>(_malloca(requestedBytes));
+
+    //
+    // Send the TPM command to read the information
+    //
+    tpmResult = TpmGetRandom(TpmHandle, &requestedBytes, randomBytes);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        fprintf(stderr, "Random bytes failed with code 0x%02x\n", tpmResult);
+        return -1;
+    }
+
+    //
+    // Print the random bytes
+    //
+    printf("Received %d random bytes back...\n", requestedBytes);
+    DumpHex(randomBytes, requestedBytes);
+
+    //
+    // Output the result back to the user
+    //
+    return 0;
+}
+
+int32_t
+GetHash (
+    int32_t ArgumentCount,
+    char* Arguments[],
+    uintptr_t TpmHandle
+    )
+{
+    TPM_RC tpmResult;
+    uint32_t userInput;
+    uint16_t requestedBytes;
+    uint8_t* data;
+    uint8_t hash[32];
+    size_t sizeRead;
+
+    //
+    // Three arguments are expected
+    //
+    if (ArgumentCount != 3)
+    {
+        PrintUsage();
+        return -1;
+    }
+
+    //
+    // Check how many random bytes the user wants
+    //
+    userInput = strtoul(Arguments[2], NULL, 0);
+    if (userInput >= USHRT_MAX)
+    {
+        fprintf(stderr, "Bytes requested over 64KB\n");
+        return -1;
+    }
+
+    //
+    // Allocate space for the data
+    //
+    requestedBytes = static_cast<uint16_t>(userInput);
+    data = reinterpret_cast<uint8_t*>(_malloca(requestedBytes));
+
+    //
+    // Read input
+    //
+    sizeRead = fread(data, 1, requestedBytes, stdin);
+    if (sizeRead == 0)
+    {
+        fprintf(stderr, "Could not read from STDIN\n");
+        return -1;
+    }
+
+    //
+    // Send the TPM command to read the information
+    //
+    tpmResult = TpmHash(TpmHandle, requestedBytes, data, hash);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        fprintf(stderr, "Hash failed with code 0x%02x\n", tpmResult);
+        return -1;
+    }
+
+    //
+    // Print the random bytes
+    //
+    DumpHex(hash, 32);
+
+    //
+    // Output the result back to the user
+    //
+    return 0;
+}
+
+int32_t
 main (
     int32_t ArgumentCount,
     char* Arguments[]
@@ -829,8 +1015,8 @@ main (
     //
     // Banner time!
     //
-    fprintf(stderr, "\nTpmTool v1.0.0 - Access TPM2.0 NV Spaces\n");
-    fprintf(stderr, "Copyright (C) 2020 Alex Ionescu\n");
+    fprintf(stderr, "\nTpmTool v1.2.0 - Access TPM2.0 NV Spaces\n");
+    fprintf(stderr, "Copyright (C) 2020-2021 Alex Ionescu\n");
     fprintf(stderr, "@aionescu -- www.windows-internals.com\n\n");
     if (ArgumentCount < 2)
     {
@@ -854,11 +1040,35 @@ main (
     res = -1;
 
     //
-    // Check for the special enumerate option with no other arguments
+    // Check for options with no other arguments
     //
     if (strcmp(Arguments[1], "-e") == 0)
     {
+        //
+        // Enumerate spaces
+        //
         res = EnumerateSpaces(ArgumentCount, tpmHandle);
+    }
+    else if (strcmp(Arguments[1], "-t") == 0)
+    {
+        //
+        // Get time info
+        //
+        res = ReadClock(ArgumentCount, tpmHandle);
+    }
+    else if (strcmp(Arguments[1], "-r") == 0)
+    {
+        //
+        // Get random bytes
+        //
+        res = GetRandom(ArgumentCount, Arguments, tpmHandle);
+    }
+    else if (strcmp(Arguments[1], "-h") == 0)
+    {
+        //
+        // Get hash
+        //
+        res = GetHash(ArgumentCount, Arguments, tpmHandle);
     }
     else
     {

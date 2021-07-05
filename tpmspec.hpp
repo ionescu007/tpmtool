@@ -49,7 +49,10 @@ typedef enum _TPM_CC : uint32_t
     TPM_CC_NV_Read = 0x14E,
     TPM_CC_NV_ReadLock = 0x14F,
     TPM_CC_NV_ReadPublic = 0x169,
-    TPM_CC_GetCapability = 0x17A
+    TPM_CC_GetCapability = 0x17A,
+    TPM_CC_GetRandom = 0x17B,
+    TPM_CC_Hash = 0x17D,
+    TPM_CC_ReadClock = 0x181
 } TPM_CC;
 
 //
@@ -224,6 +227,15 @@ typedef struct
 } TPM2B_DIGEST;
 
 //
+// Definition of a maximum sized buffer
+//
+typedef struct
+{
+    uint16_t Size;
+    uint8_t Buffer[1024];
+} TPM2B_MAX_BUFFER;
+
+//
 // Definition of a TPM2.0 Handle
 //
 typedef union
@@ -234,7 +246,7 @@ typedef union
         TPM_HT Type;
     };
     uint32_t Value;
-} TPM_HANDLE, TPMI_RH_NV_INDEX, TPMI_RH_PROVISION,
+} TPM_HANDLE, TPMI_RH_NV_INDEX, TPMI_RH_PROVISION, TPMI_RH_HIERARCHY,
   TPMI_SH_AUTH_SESSION, TPMI_RH_NV_AUTH, TPM_RH, TPM_NV_INDEX;
 static_assert(sizeof(TPM_HANDLE) == sizeof(uint32_t));
 
@@ -242,6 +254,7 @@ static_assert(sizeof(TPM_HANDLE) == sizeof(uint32_t));
 // Architecturally Defined Permanent Handles
 //
 static constexpr TPM_RH TPM_RH_OWNER = { 1, 0, 0, TPM_HT_PERMANENT };
+static constexpr TPM_RH TPM_RH_NULL = { 7, 0, 0, TPM_HT_PERMANENT };
 static constexpr TPM_RH TPM_RS_PW = { 9, 0, 0, TPM_HT_PERMANENT };
 
 //
@@ -252,6 +265,16 @@ typedef struct
     uint32_t Count;
     TPM_HANDLE Handle[MAX_CAP_HANDLES];
 } TPML_HANDLE, *PTPML_HANDLE;
+
+//
+// TPM2.0 Ticket for Hash Check
+//
+typedef struct
+{
+    TPM_ST Tag;
+    TPMI_RH_HIERARCHY Hierarchy;
+    TPM2B_DIGEST Digest;
+} TPMT_TK_HASHCHECK;
 
 //
 // TPM2.0 Union of capability data returned by TPM2_CC_GetCapabilities
@@ -269,6 +292,23 @@ typedef struct
     TPM_CAP Capability;
     TPMU_CAPABILITIES Data;
 } TPMS_CAPABILITY_DATA, *PTPMS_CAPABILITY_DATA;
+
+//
+// TPM2.0 Payload for TPM2_CC_ReadClock
+//
+typedef struct
+{
+    uint64_t Clock;
+    uint32_t ResetCount;
+    uint32_t RestartCount;
+    TPMI_YES_NO Safe;
+} TPMS_CLOCK_INFO;
+
+typedef struct
+{
+    uint64_t Time;
+    TPMS_CLOCK_INFO ClockInfo;
+} TPMS_TIME_INFO;
 
 #pragma pack(pop)
 

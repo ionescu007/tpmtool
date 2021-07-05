@@ -831,3 +831,250 @@ TpmNvEnumerate2 (
     //
     return tpmResult;
 }
+
+TPM_RC
+TpmGetRandom (
+    uintptr_t TpmHandle,
+    uint16_t* BytesRequested,
+    uint8_t* RandomBytes
+    )
+{
+    TPM_GET_RANDOM_CMD_HEADER* command;
+    TPM_GET_RANDOM_REPLY* reply;
+    uint32_t commandSize;
+    uint32_t replySize;
+    uint16_t bytesReturned;
+    bool osResult;
+    TPM_RC tpmResult;
+
+    //
+    // Allocate the command
+    //
+    commandSize = sizeof(*command);
+    command = TpmpAllocateCommand(command, commandSize);
+
+    //
+    // Fill out the TPM Command Header
+    //
+    TpmpFillCommandHeader(&command->Header,
+                          TPM_CC_GetRandom,
+                          TPM_ST_NO_SESSIONS,
+                          commandSize);
+
+    //
+    // Fill in the get random query request
+    //
+    command->BytesRequested = OsSwap16(*BytesRequested);
+
+    //
+    // Make space for the response
+    //
+    replySize = TpmFixedResponseSize(reply);
+    reply = TpmpAllocateResponse(reply, replySize);
+
+    //
+    // Call the OS function
+    //
+    osResult = TpmOsIssueCommand(TpmHandle,
+                                 reinterpret_cast<uint8_t*>(command),
+                                 commandSize,
+                                 reinterpret_cast<uint8_t*>(reply),
+                                 replySize,
+                                 nullptr);
+    if (osResult == false)
+    {
+        return TPM_RC_FAILURE;
+    }
+
+    //
+    // Read the response code, keep going only if we got success
+    //
+    tpmResult = TpmReadResponseCode(reply);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        return tpmResult;
+    }
+
+    //
+    // Read and return the response data
+    //
+    bytesReturned = OsSwap16(reply->RandomBytes.BufferSize);
+    for (int i = 0; i < bytesReturned; i++)
+    {
+        RandomBytes[i] = reply->RandomBytes.Buffer.Digest.Sha256[i - 2];
+    }
+    *BytesRequested = bytesReturned;
+
+    //
+    // Finally, return the TPM response code
+    //
+    return tpmResult;
+}
+
+TPM_RC
+TpmReadClock (
+    uintptr_t TpmHandle,
+    uint64_t* Time,
+    uint64_t* Clock,
+    uint32_t* RestartCount,
+    uint32_t* ResetCount,
+    TPMI_YES_NO* IsSafe
+    )
+{
+    TPM_READ_CLOCK_CMD_HEADER* command;
+    TPM_READ_CLOCK_REPLY* reply;
+    uint32_t commandSize;
+    uint32_t replySize;
+    bool osResult;
+    TPM_RC tpmResult;
+
+    //
+    // Allocate the command
+    //
+    commandSize = sizeof(*command);
+    command = TpmpAllocateCommand(command, commandSize);
+
+    //
+    // Fill out the TPM Command Header
+    //
+    TpmpFillCommandHeader(&command->Header,
+                          TPM_CC_ReadClock,
+                          TPM_ST_NO_SESSIONS,
+                          commandSize);
+
+    //
+    // Make space for the response
+    //
+    replySize = TpmFixedResponseSize(reply);
+    reply = TpmpAllocateResponse(reply, replySize);
+
+    //
+    // Call the OS function
+    //
+    osResult = TpmOsIssueCommand(TpmHandle,
+                                 reinterpret_cast<uint8_t*>(command),
+                                 commandSize,
+                                 reinterpret_cast<uint8_t*>(reply),
+                                 replySize,
+                                 nullptr);
+    if (osResult == false)
+    {
+        return TPM_RC_FAILURE;
+    }
+
+    //
+    // Read the response code, keep going only if we got success
+    //
+    tpmResult = TpmReadResponseCode(reply);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        return tpmResult;
+    }
+
+    //
+    // Read and return the response data
+    //
+    *Time = OsSwap64(reply->TimeInfo.Time);
+    *Clock = OsSwap64(reply->TimeInfo.ClockInfo.Clock);
+    *RestartCount = OsSwap32(reply->TimeInfo.ClockInfo.RestartCount);
+    *ResetCount = OsSwap32(reply->TimeInfo.ClockInfo.ResetCount);
+    *IsSafe = reply->TimeInfo.ClockInfo.Safe;
+
+    //
+    // Finally, return the TPM response code
+    //
+    return tpmResult;
+}
+
+TPM_RC
+TpmHash (
+    uintptr_t TpmHandle,
+    uint16_t InputSize,
+    uint8_t* InputData,
+    uint8_t* OutputData
+    )
+{
+    TPM_HASH_CMD_HEADER* commandHeader;
+    TPM_HASH_CMD_BODY* commandData;
+    TPM_HASH_CMD_FOOTER* commandFooter;
+    TPM_HASH_CMD_REPLY* reply;
+    uint32_t commandSize;
+    uint32_t replySize;
+    uint16_t bytesReturned;
+    bool osResult;
+    TPM_RC tpmResult;
+
+    //
+    // Allocate the command
+    //
+    commandSize = sizeof(*commandHeader) + sizeof(*commandFooter) + InputSize + sizeof(uint16_t);
+    commandHeader = TpmpAllocateCommand(commandHeader, commandSize);
+
+    //
+    // Fill out the TPM Command Header
+    //
+    TpmpFillCommandHeader(&commandHeader->Header,
+                          TPM_CC_Hash,
+                          TPM_ST_NO_SESSIONS,
+                          commandSize);
+
+    //
+    // Fill out the command body, which contains the input buffer
+    //
+    commandData = (TPM_HASH_CMD_BODY*)(commandHeader + 1);
+    commandData->Size = OsSwap16(InputSize);
+    for (int i = 0; i < InputSize; i++)
+    {
+        commandData->Buffer[i] = InputData[i];
+    }
+
+    //
+    // Fill out the footer with the algorithm chosen (always SHA-2 for now) and hierachy
+    //
+    commandFooter = (TPM_HASH_CMD_FOOTER*)((uint8_t*)commandData + InputSize + sizeof(uint16_t));
+    commandFooter->AlgHash = static_cast<TPMI_ALG_HASH>(OsSwap16(TPM_ALG_SHA256));
+    commandFooter->Hierarchy.Value = OsSwap32(TPM_RH_NULL.Value);
+
+    //
+    // Make space for the response
+    //
+    replySize = TpmFixedResponseSize(reply);
+    reply = TpmpAllocateResponse(reply, replySize);
+
+    //
+    // Call the OS function
+    //
+    osResult = TpmOsIssueCommand(TpmHandle,
+                                 reinterpret_cast<uint8_t*>(commandHeader),
+                                 commandSize,
+                                 reinterpret_cast<uint8_t*>(reply),
+                                 replySize,
+                                 nullptr);
+    if (osResult == false)
+    {
+        return TPM_RC_FAILURE;
+    }
+
+    //
+    // Read the response code, keep going only if we got success
+    //
+    tpmResult = TpmReadResponseCode(reply);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        return tpmResult;
+    }
+
+    //
+    // Read and return the response data
+    //
+    bytesReturned = OsSwap16(reply->OutHash.BufferSize);
+    for (int i = 0; i < bytesReturned; i++)
+    {
+        OutputData[i] = reply->OutHash.Buffer.Digest.Sha256[i - 2];
+    }
+
+    //
+    // Finally, return the TPM response code
+    //
+    return tpmResult;
+}

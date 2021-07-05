@@ -267,5 +267,63 @@ typedef struct
     TPMS_CAPABILITY_DATA Data;
 } TPM_GET_CAPABILITY_REPLY, *PTPM_GET_CAPABILITY_REPLY;
 
+// GetRandom
+typedef struct
+{
+    TPM_CMD_HEADER Header;
+    uint16_t BytesRequested;
+} TPM_GET_RANDOM_CMD_HEADER, * PTPM_GET_RANDOM_CMD_HEADER;
+
+typedef struct
+{
+    TPM_REPLY_HEADER Header;
+    TPM2B_DIGEST RandomBytes;
+} TPM_GET_RANDOM_REPLY;
+
+// ReadClock
+typedef struct
+{
+    TPM_CMD_HEADER Header;
+} TPM_READ_CLOCK_CMD_HEADER, *PTPM_READ_CLOCK_CMD_HEADER;
+
+typedef struct
+{
+    TPM_REPLY_HEADER Header;
+    TPMS_TIME_INFO TimeInfo;
+} TPM_READ_CLOCK_REPLY;
+
+//
+// Hash
+//
+typedef struct
+{
+    TPM_CMD_HEADER Header;
+    //
+    // Variable Size Hash Input
+    //
+    // ....
+    //
+    // TPM_HASH_CMD_FOOTER;
+} TPM_HASH_CMD_HEADER, *PTPM_HASH_CMD_HEADER;
+
+typedef struct
+{
+    uint16_t Size;
+    uint8_t Buffer[1];
+} TPM_HASH_CMD_BODY, *PTPM_HASH_CMD_BODY;
+
+typedef struct
+{
+    TPMI_ALG_HASH AlgHash;
+    TPMI_RH_HIERARCHY Hierarchy;
+} TPM_HASH_CMD_FOOTER, *PTPM_HASH_CMD_FOOTER;
+
+typedef struct
+{
+    TPM_REPLY_HEADER Header;
+    TPM2B_DIGEST OutHash;
+    TPMT_TK_HASHCHECK Validation;
+} TPM_HASH_CMD_REPLY;
+
 #pragma pack(pop)
 

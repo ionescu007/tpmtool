@@ -43,6 +43,14 @@ OsSwap32 (
     return _byteswap_ulong(Input);
 }
 
+uint64_t
+OsSwap64 (
+    _In_ uint64_t Input
+    )
+{
+    return _byteswap_uint64(Input);
+}
+
 bool
 TpmOsIssueCommand (
     _In_ uintptr_t TpmHandle,
