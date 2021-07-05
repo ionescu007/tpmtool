@@ -22,6 +22,10 @@ Environment:
 
 --*/
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 //
 // C Headers needed for CLI Tool
 //
@@ -127,6 +131,8 @@ PrintUsage (
     fprintf(stderr, "              LW    The index is locked against writes until reset.\n");
     fprintf(stderr, "                    NOTE: If the WO attribute is set, locked forever.\n");
     fprintf(stderr, "              PO    The index was created and is owned by the platform.\n");
+    fprintf(stderr, "    -qa   Query all NV spaces active on the TPM.\n");
+    fprintf(stderr, "          Prints size, rights and attributes for each index.\n");
     fprintf(stderr, "    -rl   Lock the NV space at the given index value against reads.\n");
     fprintf(stderr, "          The NV space must have been created with the RL attribute.\n");
     fprintf(stderr, "    -wl   Lock the NV space at the given index value against writes.\n");
@@ -630,6 +636,153 @@ CreateSpace (
     return 0;
 }
 
+TPM_RC
+QuerySpaceInternal (
+    uintptr_t TpmHandle,
+    TPM_NV_INDEX Index,
+    uint16_t* DataSize,
+    char* Attributes,
+    char* OwnerRights,
+    char* AuthRights,
+    char* AttributeBuffer
+    )
+{
+    uint16_t attributes;
+    uint8_t ownerRights;
+    uint8_t authRights;
+    TPM_RC tpmResult;
+
+    //
+    // Query information on the given space
+    //
+    tpmResult = TpmReadPublic2(TpmHandle,
+                               Index,
+                               &attributes,
+                               &ownerRights,
+                               &authRights,
+                               DataSize);
+
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        return tpmResult;
+    }
+
+    strcpy(Attributes, (attributes & TpmToolWritten) ? "dirty" : "unwritten");
+
+    if ((ownerRights & TpmToolReadWriteAccess) == TpmToolReadWriteAccess)
+    {
+        strcpy(OwnerRights, "RW");
+    }
+    else if((ownerRights & TpmToolReadAccess) == TpmToolReadAccess)
+    {
+        strcpy(OwnerRights, "R");
+    }
+    else
+    {
+        strcpy(OwnerRights, "NA");
+    }
+
+    if ((authRights & TpmToolReadWriteAccess) == TpmToolReadWriteAccess)
+    {
+        strcpy(AuthRights, "RW");
+    }
+    else if ((authRights & TpmToolReadAccess) == TpmToolReadAccess)
+    {
+        strcpy(AuthRights, "R");
+    }
+    else
+    {
+        strcpy(AuthRights, "NA");
+    }
+
+    strcpy(AttributeBuffer, " ");
+    if (attributes & TpmToolReadLockable)
+    {
+        strcat(AttributeBuffer, "RL+");
+    }
+    if (attributes & TpmToolWriteLockable)
+    {
+        strcat(AttributeBuffer, "WL+");
+    }
+    if (attributes & TpmToolWriteOnce)
+    {
+        strcat(AttributeBuffer, "WO+");
+    }
+    if (attributes & TpmToolWriteAll)
+    {
+        strcat(AttributeBuffer, "WA+");
+    }
+    if (attributes & TpmToolNonProtected)
+    {
+        strcat(AttributeBuffer, "NP+");
+    }
+    if (attributes & TpmToolCached)
+    {
+        strcat(AttributeBuffer, "CH+");
+    }
+    if (attributes & TpmToolVolatileDirtyFlag)
+    {
+        strcat(AttributeBuffer, "VL+");
+    }
+    if (attributes & TpmToolPermanent)
+    {
+        strcat(AttributeBuffer, "PT+");
+    }
+
+    //
+    // Next, the status attributes
+    //
+    if (attributes & TpmToolReadLocked)
+    {
+        strcat(AttributeBuffer, "LR+");
+    }
+    if (attributes & TpmToolWriteLocked)
+    {
+        strcat(AttributeBuffer, "LW+");
+    }
+    if (attributes & TpmToolPlatformOwned)
+    {
+        strcat(AttributeBuffer, "PO+");
+    }
+
+    return TPM_RC_SUCCESS;
+}
+
+int32_t
+QuerySpaceMinimalOutput (
+    uintptr_t TpmHandle,
+    TPM_NV_INDEX Index
+    )
+{
+    uint16_t dataSize;
+    TPM_RC tpmResult;
+    char attributes[sizeof("unwritten")];
+    char ownerRights[sizeof("NA")];
+    char authRights[sizeof("NA")];
+    char attributeBuffer[(12 * 3) + 1];
+
+    tpmResult = QuerySpaceInternal(TpmHandle,
+                                   Index,
+                                   &dataSize,
+                                   attributes,
+                                   ownerRights,
+                                   authRights,
+                                   attributeBuffer);
+    if (tpmResult != TPM_RC_SUCCESS)
+    {
+        return -1;
+    }
+
+    attributeBuffer[strlen(attributeBuffer) - 1] = '\0';
+    printf("0x%04x, %s, owner rights: %s, auth rights: %s, attributes:%s",
+           dataSize,
+           attributes,
+           ownerRights,
+           authRights,
+           attributeBuffer);
+    return 0;
+}
+
 int32_t
 QuerySpace (
     int32_t ArgumentCount,
@@ -637,11 +790,11 @@ QuerySpace (
     TPM_NV_INDEX Index
     )
 {
-    uint16_t attributes;
-    uint8_t ownerRights;
-    uint8_t authRights;
     uint16_t dataSize;
     TPM_RC tpmResult;
+    char attributes[sizeof("unwritten")];
+    char ownerRights[sizeof("NA")];
+    char authRights[sizeof("NA")];
     char attributeBuffer[(12 * 3) + 1];
 
     //
@@ -657,12 +810,13 @@ QuerySpace (
     // Query information on the given space
     //
     fprintf(stderr, "Querying NV space with index 0x%08x...\n\n", Index.Value);
-    tpmResult = TpmReadPublic2(TpmHandle,
-                               Index,
-                               &attributes,
-                               &ownerRights,
-                               &authRights,
-                               &dataSize);
+    tpmResult = QuerySpaceInternal(TpmHandle,
+                                   Index,
+                                   &dataSize,
+                                   attributes,
+                                   ownerRights,
+                                   authRights,
+                                   attributeBuffer);
     if (tpmResult != TPM_RC_SUCCESS)
     {
         fprintf(stderr, "Query failed with code 0x%02x\n", tpmResult);
@@ -675,76 +829,21 @@ QuerySpace (
     printf("NV_PUBLIC\n");
     printf("=========\n");
     printf("Data Size    : 0x%04x [%s]\n",
-           dataSize,
-           (attributes & TpmToolWritten) ? "dirty" : "unwritten");
+            dataSize,
+            attributes);
 
     //
     // Dump the owner and authorization rights
     //
     printf("Owner Rights : %s\n",
-           ((ownerRights & TpmToolReadWriteAccess) == TpmToolReadWriteAccess) ?
-           "RW" : 
-           ((ownerRights & TpmToolReadAccess) == TpmToolReadAccess) ?
-           "R" : "NA");
+            ownerRights);
     printf("Auth Rights  : %s\n",
-           ((authRights & TpmToolReadWriteAccess) == TpmToolReadWriteAccess) ?
-           "RW" :
-           ((authRights & TpmToolReadAccess) == TpmToolReadAccess) ?
-           "R" : "NA");
+            authRights);
 
     //
     // Do the attributes, first with the ones set at creation
     //
     printf("Attributes   :");
-    strcpy_s(attributeBuffer, sizeof(attributeBuffer), " ");
-    if (attributes & TpmToolReadLockable)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "RL+");
-    }
-    if (attributes & TpmToolWriteLockable)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "WL+");
-    }
-    if (attributes & TpmToolWriteOnce)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "WO+");
-    }
-    if (attributes & TpmToolWriteAll)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "WA+");
-    }
-    if (attributes & TpmToolNonProtected)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "NP+");
-    }
-    if (attributes & TpmToolCached)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "CH+");
-    }
-    if (attributes & TpmToolVolatileDirtyFlag)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "VL+");
-    }
-    if (attributes & TpmToolPermanent)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "PT+");
-    }
-
-    //
-    // Next, the status attributes
-    //
-    if (attributes & TpmToolReadLocked)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "LR+");
-    }
-    if (attributes & TpmToolWriteLocked)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "LW+");
-    }
-    if (attributes & TpmToolPlatformOwned)
-    {
-        strcat_s(attributeBuffer, sizeof(attributeBuffer), "PO+");
-    }
 
     //
     // This is dirty... converts the last plus into a newline *g*
@@ -762,7 +861,8 @@ QuerySpace (
 int32_t
 EnumerateSpaces (
     int32_t ArgumentCount,
-    uintptr_t TpmHandle
+    uintptr_t TpmHandle,
+    bool QuerySpaces
     )
 {
     uint32_t handleCount;
@@ -998,6 +1098,7 @@ GetHash (
     //
     // Output the result back to the user
     //
+
     return 0;
 }
 
@@ -1044,10 +1145,11 @@ main (
     //
     if (strcmp(Arguments[1], "-e") == 0)
     {
-        //
-        // Enumerate spaces
-        //
-        res = EnumerateSpaces(ArgumentCount, tpmHandle);
+        res = EnumerateSpaces(ArgumentCount, tpmHandle, false);
+    }
+    else if (strcmp(Arguments[1], "-qa") == 0)
+    {
+        res = EnumerateSpaces(ArgumentCount, tpmHandle, true);
     }
     else if (strcmp(Arguments[1], "-t") == 0)
     {
